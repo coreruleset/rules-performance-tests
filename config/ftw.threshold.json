@@ -1,0 +1,42 @@
+{
+    "util_name": "ftw",
+    "threshold_version": "0.0.1",
+    "thresholds": [
+        {
+            "id": 1,
+            "threshold_name": "success_cnt_eq_before",
+            "threshold_desc": "success count should be the same as before",
+            "metric_name": "success",
+            "comparison_unit": "cnt",
+            "comparison_method": "eq",
+            "comparison_object": "before",
+            "threshold": 0,
+            "include_labels": null,
+            "exclude_labels": null
+        },
+        {
+            "id": 2,
+            "threshold_name": "failed_cnt_eq_before",
+            "threshold_desc": "failed count should be the same as before",
+            "metric_name": "failed",
+            "comparison_unit": "cnt",
+            "comparison_method": "eq",
+            "comparison_object": "before",
+            "threshold": 0,
+            "include_labels": null,
+            "exclude_labels": null
+        },
+        {
+            "id": 3,
+            "threshold_name": "avg_920170_test_cases_is_slow_more_than_5x",
+            "threshold_desc": "rule 920170 is slower than before more than 5x",
+            "metric_name": "runtime",
+            "comparison_unit": "",
+            "comparison_method": "ratioGt",
+            "comparison_object": "before",
+            "threshold": 5,
+            "include_labels": ["920170"],
+            "exclude_labels": null
+        }
+    ]
+}

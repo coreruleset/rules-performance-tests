@@ -1,0 +1,81 @@
+---
+name: Performance Tests
+
+on:
+  push:
+    paths:
+      - 'rules/**'
+      - 'tests/**'
+      - '.github/**'
+  pull_request:
+    paths:
+      - 'rules/**'
+      - 'tests/**'
+      - '.github/**'
+
+jobs:
+  performance_test:
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        modsec_version: [modsec2-apache]
+    steps:
+      - name: "Checkout repo"
+        uses: actions/checkout@v3
+        with:
+          fetch-depth: 0
+
+      - name: "Setup Python"
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.11'
+
+      - name: "Install Poetry"
+        uses: snok/install-poetry@v1
+        with:
+          version: 1.5.1
+          virtualenvs-create: true
+          virtualenvs-in-project: false
+          installer-parallel: true
+
+      - name: "Install dependencies"
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GO_FTW_VERSION: '0.4.8'
+        run: |
+
+          # install ftw
+          gh release download -R coreruleset/go-ftw v${GO_FTW_VERSION} -p "ftw_${GO_FTW_VERSION}_linux_amd64.tar.gz" -O - | tar -xzvf - ftw
+
+          # fetch rules, tests, etc. form CRS
+          git clone https://github.com/coreruleset/coreruleset
+          mv ./coreruleset/plugins ./
+          mv ./coreruleset/tests ./
+          mv ./coreruleset/crs-setup.conf.example ./
+          rm -rf coreruleset
+
+          # create ftw yaml file
+          cp .example.ftw.yaml .ftw.yaml
+
+          # init dependencies
+          poetry install
+
+      - name: "Collect raw data"
+        run: |
+
+          BEFORE_COMMIT=${{ github.event.before }}
+          AFTER_COMMIT=${{ github.event.after }}
+
+          poetry run collect --test-name pipeline-test --before "$BEFORE_COMMIT" --after "$AFTER_COMMIT" --utils locust,ftw --mode pipeline
+
+      - name: "Display Text-based report"
+        run: |
+
+          # output to summary
+          poetry run report --test-name pipeline-test --utils ftw --threshold-conf './config' >> $GITHUB_STEP_SUMMARY
+          poetry run report --test-name pipeline-test --utils locust >> $GITHUB_STEP_SUMMARY
+
+      - uses: actions/upload-artifact@v3
+        with:
+          name: data
+          path: data
