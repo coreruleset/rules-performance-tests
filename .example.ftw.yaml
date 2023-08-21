@@ -1,0 +1,5 @@
+# dist of your CRS error.log
+logfile: "./tests/logs/modsec2-apache/error.log"
+logmarkerheadername: X-CRS-TEST
+testoverride:
+mode: "default"

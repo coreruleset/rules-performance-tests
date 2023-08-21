@@ -1,0 +1,66 @@
+{
+    "util_name": "cAdvisor",
+    "threshold_version": "0.0.1",
+    "thresholds": [
+        {
+            "id": 1,
+            "threshold_name": "cpu_total_each_le_before",
+            "threshold_desc": "cpu total usage should be less than or equal to before",
+            "metric_name": "cpu_total",
+            "comparison_unit": "each",
+            "comparison_method": "lt",
+            "comparison_object": "before",
+            "threshold": 0,
+            "include_labels": null,
+            "exclude_labels": null
+        },
+        {
+            "id": 2,
+            "threshold_name": "cpu_user_each_le_before",
+            "threshold_desc": "cpu user usage should be less than or equal to before",
+            "metric_name": "cpu_user",
+            "comparison_unit": "each",
+            "comparison_method": "lt",
+            "comparison_object": "before",
+            "threshold": 0,
+            "include_labels": null,
+            "exclude_labels": null
+        },
+        {
+            "id": 3,
+            "threshold_name": "cpu_system_each_le_before",
+            "threshold_desc": "cpu system usage should be less than or equal to before",
+            "metric_name": "cpu_system",
+            "comparison_unit": "each",
+            "comparison_method": "lt",
+            "comparison_object": "before",
+            "threshold": 0,
+            "include_labels": null,
+            "exclude_labels": null
+        },
+        {
+            "id": 4,
+            "threshold_name": "memory_usage_each_le_before",
+            "threshold_desc": "memory usage should be less than or equal to before",
+            "metric_name": "memory_usage",
+            "comparison_unit": "each",
+            "comparison_method": "lt",
+            "comparison_object": "before",
+            "threshold": 0,
+            "include_labels": null,
+            "exclude_labels": null
+        },
+        {
+            "id": 5,
+            "threshold_name": "memory_cache_each_le_before",
+            "threshold_desc": "memory cache should be less than or equal to before",
+            "metric_name": "memory_cache",
+            "comparison_unit": "each",
+            "comparison_method": "lt",
+            "comparison_object": "before",
+            "threshold": 0,
+            "include_labels": null,
+            "exclude_labels": null
+        }
+    ]
+}

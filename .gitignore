@@ -1,0 +1,21 @@
+.vscode
+.DS_Store
+
+# Pytest
+__pycache__
+.coverage
+.coveragerc
+
+# clones form CRS
+plugins/
+tests/
+rules/
+crs-setup.conf.example
+
+# auto-generated files
+tmp/
+data/
+report/
+
+# user-specific files
+.ftw.yaml
