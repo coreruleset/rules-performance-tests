@@ -14,12 +14,13 @@ Usage:
 """
 import argparse
 import os
+import sys
 from src.model import ReportCommandArg, UtilMapper
 from src.type import ReportFormat, UtilType
 from src.utils import logger
 
 
-def get_summary_command_arg() -> ReportCommandArg:
+def get_summary_command_arg(args: any) -> ReportCommandArg:
     """
     get summary command arg from STDIN
 
@@ -33,7 +34,7 @@ def get_summary_command_arg() -> ReportCommandArg:
     parser.add_argument('--raw-output', type=str, help='raw output')
     parser.add_argument('--threshold-conf', type=str, help='threshold conf')
     parser.add_argument('--format', type=str, help='output')
-    parsed_args = parser.parse_args()
+    parsed_args = parser.parse_args(args)
 
     # @TODO: default with all utils
     return ReportCommandArg(
@@ -51,24 +52,27 @@ def init(args: ReportCommandArg):
     """
     os.makedirs(args.output, exist_ok=True)
 
-def main():
+def main(args: any = None):
     """
     script entrypoint of report.py
     """
 
+    if args is None:
+        args = sys.argv[1:]
+
     # check the inputs
-    args = get_summary_command_arg()
+    command_args = get_summary_command_arg(args)
 
     # create folder
-    init(args)
+    init(command_args)
 
     # build the report
-    for util in args.utils:
-        if args.report_format == ReportFormat.TEXT:
-            UtilMapper.get(UtilType(UtilType[util.upper()]))().text_report(args)
+    for util in command_args.utils:
+        if command_args.report_format == ReportFormat.TEXT:
+            UtilMapper.get(UtilType(UtilType[util.upper()]))().text_report(command_args)
 
-        elif args.report_format == ReportFormat.IMG:
-            UtilMapper.get(UtilType(UtilType[util.upper()]))().figure_report(args)
+        elif command_args.report_format == ReportFormat.IMG:
+            UtilMapper.get(UtilType(UtilType[util.upper()]))().figure_report(command_args)
 
         else:
             logger.critical("--format support text or img")

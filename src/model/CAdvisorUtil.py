@@ -58,7 +58,7 @@ class CAdvisorUtil(Util):
             time.sleep(10)
 
         self.fetch_data(data_list, timestamp_set, url)
-        self.save_json(f"{args.raw_output}/{state.name}_{self.raw_filename}", data_list)
+        self.save_json(f"{args.raw_output}/{state.value}_{self.raw_filename}", data_list)
         self.__stop_cadvisor()
 
     def text_report(self, args: ReportCommandArg):

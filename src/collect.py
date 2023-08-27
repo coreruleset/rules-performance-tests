@@ -9,6 +9,7 @@ Usage:
 """
 import argparse
 import os
+import sys
 import time
 import subprocess
 import shutil
@@ -30,7 +31,7 @@ class _ChangedRule:
     def __init__(self, req: str):
         self.req = req
 
-def get_test_command_arg() -> CollectCommandArg:
+def get_test_command_arg(args: any) -> CollectCommandArg:
     """
     get test command arg from STDIN
 
@@ -47,7 +48,7 @@ def get_test_command_arg() -> CollectCommandArg:
     parser.add_argument('--waf-endpoint', type=str, help='waf endpoint')
     parser.add_argument('--mode', type=str, help='mode')
 
-    parsed_args = parser.parse_args()
+    parsed_args = parser.parse_args(args)
 
     return CollectCommandArg(
         test_name=parsed_args.test_name,
@@ -226,19 +227,22 @@ def waf_server_is_up(waf_endpoint: str) -> bool:
 
     return False
 
-def main():
+def main(args: any = None):
     """
     script entrypoint of collect.py
     """
 
+    if args is None:
+        args = sys.argv[1:]
+
     # check the inputs
-    args = get_test_command_arg()
+    command_args = get_test_command_arg(args)
 
     # create folder
-    init(args)
+    init(command_args)
 
     # get corresponding test files
-    changed_rules = get_changed_rules(args)
+    changed_rules = get_changed_rules(command_args)
 
     # if there's no changed rule, exit
     if len(changed_rules) == 0:
@@ -246,10 +250,10 @@ def main():
         exit(0)
 
     # init temp file for testing
-    init_tmp_file(args, changed_rules)
+    init_tmp_file(command_args, changed_rules)
 
-    init_docker_compose_file(args, State.BEFORE)
-    runner(args, State.BEFORE)
+    init_docker_compose_file(command_args, State.BEFORE)
+    runner(command_args, State.BEFORE)
 
-    init_docker_compose_file(args, State.AFTER)
-    runner(args, State.AFTER)
+    init_docker_compose_file(command_args, State.AFTER)
+    runner(command_args, State.AFTER)
