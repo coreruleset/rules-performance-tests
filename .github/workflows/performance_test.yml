@@ -3,11 +3,15 @@ name: Performance Tests
 
 on:
   push:
+    branches:
+      - demo
     paths:
       - 'rules/**'
       - 'tests/**'
       - '.github/**'
   pull_request:
+    branches:
+      - demo
     paths:
       - 'rules/**'
       - 'tests/**'

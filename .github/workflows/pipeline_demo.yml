@@ -1,0 +1,40 @@
+name: Push from branch dev to demo
+
+on:
+  push:
+    branches:
+      - dev
+
+jobs:
+  push_to_pipeline_demo:
+    runs-on: ubuntu-latest
+    env:
+      CoreRuleSetBranch: "v4.0/dev"
+    steps:
+      - name: git-checkout
+        uses: actions/checkout@v2
+
+      - name: initialize
+        run: |
+
+        # clone corresponding files
+        git clone -b $CoreRuleSetBranch git@github.com:coreruleset/coreruleset.git
+        mv ./coreruleset/plugins ./
+        mv ./coreruleset/tests ./
+        mv ./coreruleset/crs-setup.conf.example ./
+        rm -rf coreruleset
+        cp .example.ftw.yaml .ftw.yaml
+
+        # update .gitignore
+        rm -rf .gitignore
+        ignore_list=( '.vscode' '.DS_Store' '__pycache__' '.coverage' 'tmp/' 'data/' 'report/' '!tests/docker-compose.yml' 'tests' );
+        printf '%s\n' "${ignore_list[@]}" >> .gitignore
+
+      - name: push
+        uses: s0/git-publish-subdir-action@develop
+        env:
+          REPO: self
+          BRANCH: demo
+          FOLDER: .
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          MESSAGE: "auto-push: ({sha}) {msg}"
