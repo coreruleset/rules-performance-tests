@@ -12,13 +12,13 @@ jobs:
       CoreRuleSetBranch: "v4.0/dev"
     steps:
       - name: git-checkout
-        uses: actions/checkout@v2
+        uses: actions/checkout@v3
 
       - name: initialize
         run: |
 
           # clone corresponding files
-          git clone -b $CoreRuleSetBranch git@github.com:coreruleset/coreruleset.git
+          git clone -b $CoreRuleSetBranch https://github.com/coreruleset/coreruleset
           mv ./coreruleset/plugins ./
           mv ./coreruleset/tests ./
           mv ./coreruleset/crs-setup.conf.example ./
