@@ -17,18 +17,18 @@ jobs:
       - name: initialize
         run: |
 
-        # clone corresponding files
-        git clone -b $CoreRuleSetBranch git@github.com:coreruleset/coreruleset.git
-        mv ./coreruleset/plugins ./
-        mv ./coreruleset/tests ./
-        mv ./coreruleset/crs-setup.conf.example ./
-        rm -rf coreruleset
-        cp .example.ftw.yaml .ftw.yaml
+          # clone corresponding files
+          git clone -b $CoreRuleSetBranch git@github.com:coreruleset/coreruleset.git
+          mv ./coreruleset/plugins ./
+          mv ./coreruleset/tests ./
+          mv ./coreruleset/crs-setup.conf.example ./
+          rm -rf coreruleset
+          cp .example.ftw.yaml .ftw.yaml
 
-        # update .gitignore
-        rm -rf .gitignore
-        ignore_list=( '.vscode' '.DS_Store' '__pycache__' '.coverage' 'tmp/' 'data/' 'report/' '!tests/docker-compose.yml' 'tests' );
-        printf '%s\n' "${ignore_list[@]}" >> .gitignore
+          # update .gitignore
+          rm -rf .gitignore
+          ignore_list=( '.vscode' '.DS_Store' '__pycache__' '.coverage' 'tmp/' 'data/' 'report/' '!tests/docker-compose.yml' 'tests' );
+          printf '%s\n' "${ignore_list[@]}" >> .gitignore
 
       - name: push
         uses: s0/git-publish-subdir-action@develop
