@@ -7,9 +7,6 @@ __pycache__
 .coveragerc
 
 # clones form CRS
-plugins/
-tests/
-rules/
 crs-setup.conf.example
 
 # auto-generated files
@@ -19,3 +16,7 @@ report/
 
 # user-specific files
 .ftw.yaml
+
+tests/integration
+tests/regression
+tests/logs
