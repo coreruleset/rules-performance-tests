@@ -6,7 +6,7 @@ GSoC 2023 - CRS: WAF Performance Testing Framework
 >
 > Organisation: OWASP Foundation
 >
-> Mentor: fzipitria, Christian Folini
+> Mentor: [Felipe Zipitría / fzipi](https://github.com/fzipi), [Christian Folini / dune73](https://github.com/dune73)
 >
 > Link to GSOC 2023 Project List: https://summerofcode.withgoogle.com/programs/2023/projects/jdv2MaJR
 
