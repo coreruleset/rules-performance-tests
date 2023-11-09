@@ -13,9 +13,9 @@ import sys
 import time
 import subprocess
 import shutil
+import requests
 from typing import List
 import docker
-from ping3 import ping
 from src.model import CollectCommandArg, UtilMapper
 from src.type import State, UtilType
 from src.utils import logger
@@ -141,8 +141,45 @@ def init_tmp_file(arg: CollectCommandArg, changed_rules: List[_ChangedRule]):
     for changed_rule in changed_rules:
         try:
             shutil.copytree(f"./tests/regression/tests/{changed_rule.req}/", f"{arg.test_cases_dir}/{changed_rule.req}/")
-        except OSError as e:
+        except OSError:
             logger.warning(f"Test case for {changed_rule.req} does not have test case")
+
+    # clone *.data
+    exec_cmd = f"ls tmp/rules | grep -E \'.*.data$\'"
+
+    output = subprocess.check_output(exec_cmd, shell=True).decode()
+
+    rules_data_filenames: List[str] = []
+
+    def clone_rule_data_from_root(filename: str):
+        shutil.copyfile(f"tmp/rules/{filename}", f"{arg.after_rules_dir}/{filename}")
+
+    def clone_rule_data_from_commit(filename: str, before: bool):
+        cmd = f"git show {arg.before if before else arg.after}:rules/{filename} > {arg.before_rules_dir if before else arg.after_rules_dir}/{filename}"
+        out = subprocess.run(cmd, shell=True, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL, check=False)
+
+        if out.returncode != 0:
+            state = 'before' if before else 'after'
+            logger.warning(f"[State = {state}] file {filename} cloned from root")
+            shutil.copyfile(f"tmp/rules/{filename}", f"{arg.before_rules_dir if before else arg.after_rules_dir}/{filename}")
+        else:
+            clone_rule_data_from_root(filename)
+
+    for line in output.splitlines():
+        rules_data_filenames.append(line)
+
+    for filename in rules_data_filenames:
+        # before
+        clone_rule_data_from_commit(filename, before=True)
+
+        # after
+        if arg.after.startswith("--"):
+            if (os.path.exists(f"rules/{filename}")):
+                shutil.copyfile(f"rules/{filename}", f"{arg.after_rules_dir}/{filename}")
+            else:
+                clone_rule_data_from_root(filename)
+        else:
+            clone_rule_data_from_commit(filename, before=False)
 
 def init_docker_compose_file(arg: CollectCommandArg, state: State):
     """
@@ -179,7 +216,7 @@ def runner(args: CollectCommandArg, state: State):
     subprocess.run(cmd, shell=True, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL, capture_output=False)
 
     # check it's up and running
-    if not waf_server_is_up(args.waf_endpoint):
+    if not waf_server_is_up(args.waf_endpoint, args.modsec_version):
         logger.critical("WAF server is not up")
         exit(1)
 
@@ -196,9 +233,11 @@ def runner(args: CollectCommandArg, state: State):
     """
     subprocess.run(cmd, shell=True, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL, capture_output=False)
 
-def waf_server_is_up(waf_endpoint: str) -> bool:
+def waf_server_is_up(waf_endpoint: str, modsec_version: str) -> bool:
     """
-    check if waf server is up
+    check if waf server is up. Two conditions are inspected:
+    1. docker container is up and running
+    2. http server is up and running
 
     Args:
         waf_endpoint (str): waf endpoint
@@ -209,15 +248,19 @@ def waf_server_is_up(waf_endpoint: str) -> bool:
     timeout, retry = 5, 0
 
     while retry < 3:
-        if docker.from_env().api.inspect_container("modsec2-apache")["State"]["Status"] == 'running':
-            return True
+        if docker.from_env().api.inspect_container(modsec_version)["State"]["Status"] == 'running':
+            break
         retry += 1
         time.sleep(timeout)
 
     retry = 0
 
     while retry < 3:
-        result = ping(waf_endpoint, timeout=timeout)
+        try:
+            result = requests.get(waf_endpoint, timeout=5)
+        except requests.exceptions.ConnectionError:
+            result = None
+
         if result is None or not result:
             retry += 1
             time.sleep(timeout)
