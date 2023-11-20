@@ -179,10 +179,13 @@ To run the framework, you need to install the following tools:
 ## Quick Start
 
 ```sh
-git clone -b feat/v2-performance-framework git@github.com:dextermallo/GSoC-2023.git
-cd GSoC-2023
+git clone git@github.com:coreruleset/rules-performance-tests.git
+cd rules-performance-tests
 
+# the framework relies on coreruleset, in which init.sh installs the necessary files
+# you may need to check if coreruleset/go-ftw is runnable if you are not running this script
 source init.sh
+
 poetry install
 
 # And it is ready to go. Find a rule file and make some changes...
