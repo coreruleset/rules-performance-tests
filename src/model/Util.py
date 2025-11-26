@@ -410,17 +410,20 @@ class Util(ABC):
     def create_time_series_terminal_plot(
         self,
         title: str,
-        before_data: List[ParsedDataItem],
-        after_data: List[ParsedDataItem]) -> str:
+        data: List[ParsedDataItem]) -> str:
 
-        """_summary_
+        """
+        Create a time series terminal plot for a single dataset
+
+        Args:
+            title (str): title of the plot
+            data (List[ParsedDataItem]): data to plot
 
         Raises:
-            Exception: _description_
-            Exception: _description_
+            Exception: if terminal size is too small
 
         Returns:
-            _type_: _description_
+            str: formatted plot string
         """
 
         (column, line) = shutil.get_terminal_size((80, 20))
@@ -430,7 +433,7 @@ class Util(ABC):
             raise Exception(f"Terminal line is too small, minimum requirement: 12 (current: {line})")
 
         config = {
-            "colors": [ asciichart.blue,  asciichart.red],
+            "colors": [asciichart.blue],
             "height": line - 7
         }
         def iso_time_str_to_unix_time(iso_time_str: str) -> float:
@@ -458,7 +461,7 @@ class Util(ABC):
                     arr.append(arr[-1])
             return arr
 
-        f_before, f_after = flatten(before_data), flatten(after_data)
+        f_data = flatten(data)
 
         # create title line
         spacer = (column - len(title) - 4) // 2
@@ -466,11 +469,33 @@ class Util(ABC):
 
         return (
             f"{self.color_text(title_line, 'white', True)}\n" +
-            f"{self.color_text('Warning: The text-chart only provides a simple visualization and it cannot depict the details.', 'yellow')}" +
-            f"{self.color_text('Please use --format figure for better view. ', 'yellow')}" +
-            f"({self.color_text('Before: Blue', 'blue')} / {self.color_text('After: Red', 'red')})\n\n" +
-            asciichart.plot([f_before, f_after], config)
+            f"{self.color_text('Warning: The text-chart only provides a simple visualization and it cannot depict the details.', 'yellow')}\n" +
+            f"{self.color_text('Please use --format figure for better view. ', 'yellow')}\n\n" +
+            asciichart.plot([f_data], config)
         )
+
+    def create_data_terminal_table(self, data: dict[str, List[ParsedDataItem]],
+                                    row: List[str]) -> Table:
+        """
+        Create a terminal table for displaying data without comparison
+
+        Args:
+            data (dict[str, List[ParsedDataItem]]): data to display
+            row (List[str]): row headers
+
+        Returns:
+            Table: formatted astropy table
+        """
+        output = Table()
+        output['Matrix'] = row
+
+        for key in data.keys():
+            cur_output = []
+            for i in range(len(data[key][0].value)):
+                out = f"{'{0:.4f}'.format(float(data[key][0].value[i]))}"
+                cur_output.append(out)
+            output[key] = cur_output
+        return output
 
     # @TODO: make it generic
     def create_data_diff_terminal_table(self, before_data: dict[str, List[ParsedDataItem]],
@@ -498,7 +523,7 @@ class Util(ABC):
                     f" ({self.create_colored_text_by_value(diff)})"
                 )
                 cur_output.append(out)
-            output[key] = cur_output  
+            output[key] = cur_output
         return output
 
     def color_text(self, text: str, color: str, bold: bool = False) -> str:

@@ -6,43 +6,40 @@ import os
 import json
 import time
 from typing import List
-from src.type import State, Mode
+from src.type import Mode
 from .Util import ParsedDataItem, Util, ReportCommandArg, CollectCommandArg
 
 
 REPORT_PLAIN_TEXT_FORMAT: str = (
     " Test Name: {test_name}\n"
-    "       Run: {before_run:12} -> {after_run} ({run_changes})\n"
-    "   Success: {before_success:12} -> {after_success} ({success_changes})\n"
-    "    Failed: {before_failed:12} -> {after_failed} ({failed_changes})\n"
-    "Total Time: {before_total_time:12} -> {after_total_time} ({total_time_changes})\n"
+    "       Run: {run}\n"
+    "   Success: {success}\n"
+    "    Failed: {failed}\n"
+    "   Skipped: {skipped}\n"
+    "Total Time: {total_time}s\n"
 )
 
 class FTWUtil(Util):
-    """_summary_
-    FTWCollector is a class for collecting data from go-ftw, it utilizes the go-ftw
+    """
+    FTWUtil is a class for collecting data from go-ftw, it utilizes the go-ftw
     for calling the testcases and parsing the data.
 
     Usage:
         ```sh
-        # both group_id and test_rule_id are optional,
-        # if group_id is not specified, it will be generated automatically with a
-        # six-digit random number.
-        # if test_rule_id is not specified, it will run all testcases.
-        $ poetry run ftw-collector <group_id> <test_rule_id>
+        poetry run collect --test-name example --utils ftw
         ```
     """
 
     raw_filename: str = "ftw.json"
 
-    def collect(self, args: CollectCommandArg, state: State = None):
+    def collect(self, args: CollectCommandArg):
         # go-ftw requires time to spin up, otherwise the I/O might be timeout
         time.sleep(5)
 
         # @TODO: better wrapping for different mode
         ftw_util_path = './ftw' if args.mode == Mode.PIPELINE.value else 'go-ftw'
 
-        output_file = f"{args.raw_output}/{state.value}_{self.raw_filename}"
+        output_file = f"{args.raw_output}/{self.raw_filename}"
         command = f'{ftw_util_path} run -d "{args.test_cases_dir}" -o json > "{output_file}"'
 
         f = open(output_file, "w")
@@ -53,29 +50,16 @@ class FTWUtil(Util):
         f.close()
 
     def text_report(self, args: ReportCommandArg):
-        before_data = self.parse_data(f"{args.raw_output}/{State.BEFORE.value}_{self.raw_filename}")
-        after_data = self.parse_data(f"{args.raw_output}/{State.AFTER.value}_{self.raw_filename}")
-
-        run_changes = self.create_colored_text_by_value(before_data["run"].value - after_data["run"].value)
-        success_changes = self.create_colored_text_by_value(len(before_data["success"]) - len(after_data["success"]))
-        failed_changes = self.create_colored_text_by_value(len(before_data["failed"]) - len(after_data["failed"]))
-        total_time_changes = self.create_colored_text_by_value(before_data["totalTime"].value - after_data["totalTime"].value)
+        data = self.parse_data(f"{args.raw_output}/{self.raw_filename}")
 
         # generate report
         report = REPORT_PLAIN_TEXT_FORMAT.format(
             test_name=args.test_name,
-            before_run=before_data["run"].value,
-            after_run=after_data["run"].value,
-            run_changes=run_changes,
-            before_success=len(before_data["success"]),
-            after_success=len(after_data["success"]),
-            success_changes=success_changes,
-            before_failed=len(before_data["failed"]),
-            after_failed=len(after_data["failed"]),
-            failed_changes=failed_changes,
-            before_total_time=before_data["totalTime"].value,
-            after_total_time=after_data["totalTime"].value,
-            total_time_changes=total_time_changes
+            run=data["run"].value,
+            success=len(data["success"]),
+            failed=len(data["failed"]),
+            skipped=len(data["skipped"]),
+            total_time=data["totalTime"].value
         )
 
         print(report)
@@ -86,7 +70,7 @@ class FTWUtil(Util):
         thresholds = self._get_threshold(os.path.join(args.threshold_conf, "ftw.threshold.json"))
 
         for threshold in thresholds:
-            threshold.inspect(before_data[threshold.metric_name], after_data[threshold.metric_name])
+            threshold.inspect(data[threshold.metric_name])
 
     def figure_report(self, args: ReportCommandArg):
         pass

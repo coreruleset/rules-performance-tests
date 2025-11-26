@@ -18,7 +18,7 @@ GSoC 2023 - CRS: WAF Performance Testing Framework
 - [Use case](#use-case)
     - [Interactive Mode](#interactive-mode)
     - [Pipeline Mode](#pipeline-mode)
-- [Utils and Matrices](#utils-and-matrices)
+- [Utils and Metrics](#utils-and-metrics)
 - [Get Started](#get-started)
     - [Prerequisite](#prerequisite)
     - [Quick Start](#quick-start)
@@ -32,9 +32,9 @@ GSoC 2023 - CRS: WAF Performance Testing Framework
 
 # Introduction
 
-Performance evaluation is one of the concerns when using [OWASP Core Rule Sets](https://coreruleset.org/docs/). More specifically, people take different approaches to examine the performance, such as stability tests (e.g., the peak of I/O, speed of re-connection, RTT) and capacity tests (e.g., use of disks). However, individuals often miss measuring the performance when using 3rd-party library, namely before/after using the WAFs.
+Performance evaluation is one of the concerns when using [OWASP Core Rule Sets](https://coreruleset.org/docs/). More specifically, people take different approaches to examine the performance, such as stability tests (e.g., the peak of I/O, speed of re-connection, RTT) and capacity tests (e.g., use of disks). However, individuals often lack comprehensive tools for measuring the performance characteristics of WAF configurations.
 
-While performance evaluation is a challenge for the users, it is an obstacle for the community as well. Although there are automated tests in Core Rule Set when releasing the project (using another library called [go-ftw](https://github.com/coreruleset/go-ftw)), performance tests are yet to be integrated into the pipeline.
+While performance evaluation is a challenge for the users, it is an obstacle for the community as well. Although there are automated tests in Core Rule Set when releasing the project (using [go-ftw](https://github.com/coreruleset/go-ftw)), comprehensive performance testing and metrics collection are not fully integrated into the pipeline. This framework builds upon go-ftw and other tools to provide a unified performance testing solution.
 
 A list of deliverables in this GSoC project includes:
 1. Define a framework for testing performance for a generic WAF using Core Rule Set (e.g., ModSecurity 2.9, 3.0+, and Coraza).
@@ -52,13 +52,13 @@ The following diagram depicts the workflow and process of the framework:
 
 Specifically, there are two terms to be considered when using the framework:
 
-1. **Utility**: A utility means a tool that is used to collect matrices in the framework. For instance, people may be interested in how a change will impact CPU and memory usage. Therefore, cAdvisor can be used to collect these matrices.
-2. **Matrices**: Matrices are the value that you are looking for. For example, CPU and memory usage are the matrices that you are looking for in the previous example.
+1. **Utility**: A utility means a tool that is used to collect metrics in the framework. For instance, people may be interested in measuring CPU and memory usage. Therefore, cAdvisor can be used to collect these metrics.
+2. **Metrics**: Metrics are the values that you are measuring. For example, CPU and memory usage are the metrics that you collect in the previous example.
 
-You must choose the appropriate utility to collect the matrices you are looking for. Details of the supported utilities and matrices can be found in Section [Utils and Matrices](#utils-and-matrices).
+You must choose the appropriate utility to collect the metrics you are looking for. Details of the supported utilities and metrics can be found in Section [Utils and Metrics](#utils-and-metrics).
 
-Meanwhile, Each utility must implement two modules:
-1. **Collect Module**: Collect module is called when the command `poetry run collect` is executed. The collect module is responsible for collecting the matrices from the utility. These data are classified as raw data.
+Meanwhile, each utility must implement two modules:
+1. **Collect Module**: Collect module is called when the command `poetry run collect` is executed. The collect module is responsible for collecting the metrics from the utility. For example, the `ftw` utility invokes the go-ftw command-line tool to run tests and collect runtime metrics. These data are classified as raw data.
 2. **Report Module**: Report module is called when the command `poetry run report` is executed. The report module is responsible for parsing and visualizing the data in different formats (e.g., text, image, HTML).
 
 # Use cases
@@ -67,67 +67,51 @@ The framework supports two use cases:
 
 ## Interactive Mode
 
-As a contributor, they may want to test code changes for a regex in the WAF. For example:
+As a contributor, you may want to test the performance characteristics of your WAF configuration. For example, you might want to understand:
+
+- CPU: what is the CPU usage under the current configuration?
+- Memory: how much memory does the WAF consume?
+- Network I/O: what is the network I/O performance?
+- Load testing: how does the WAF perform under heavy load?
+- Runtime: what is the response time for different test cases?
+
+The framework allows you to collect performance metrics for your current WAF configuration and validate them against defined thresholds. To use the framework, run the following commands:
 
 ```sh
-# original
-SecRule REQUEST_METHOD "@rx ^(?:GET|HEAD)$" \
+# Collect performance data from different utilities
+poetry run collect --test-name my-performance-test --utils ftw,locust
 
-# after a code change
-SecRule REQUEST_METHOD "@rx ^(?:GET|POST|HEAD)$" \
+# Generate the report for ftw
+poetry run report --test-name my-performance-test --utils ftw
+
+# Generate the report for locust (different utils may have different output formats)
+poetry run report --test-name my-performance-test --utils locust
 ```
 
-However, they do not know whether the code change will affect the performance of the WAF.
-Specifically, they may be interested in whether the changes will affect the following matrices:
-- CPU: does the code change increase CPU usage?
-- Memory: does the code change increase memory usage?
-- Network I/O: does the code change increase network I/O?
-- Load testing: does the code change impact when the WAF is under heavy load?
-- etc.
-
-Therefore, they can use the framework to test the performance before/after the code change. To use the framework, they can run the following command:
+Example workflow for testing rule 920170:
 
 ```sh
-# collect the data from different utils
-poetry run collect --test-name test --utils ftw,locust
+# Run performance tests on your current WAF configuration
+poetry run collect --test-name rule-920170-test --utils ftw,cAdvisor
 
-# generate the report
-poetry run report --test-name test --utils ftw
+# Generate reports to analyze the performance metrics
+poetry run report --test-name rule-920170-test --utils ftw
+poetry run report --test-name rule-920170-test --utils cAdvisor
 
-# different utils may have different output format for reports
-poetry run report --test-name test --utils locust
+# Use thresholds to validate performance meets requirements
+poetry run report --test-name rule-920170-test --utils ftw --threshold "./config"
 ```
 
-To demonstrate how the framework can help to dive into the performance bottleneck, we use the following example to show how the framework can help to find the bottleneck. Here are the changes in the test:
-
-```md
-# Test case: rule 920170.
-# The changes are made in the regex to test whether
-# the performance will be affected.
-# Specifically, it is obvious that the regex is expanded, and 
-# the performance, like runtime, should be longer than before.
-
-# before
-SecRule REQUEST_METHOD "@rx ^(?:GET|HEAD)$" \
-
-# after ( 200 random words which have 3 - 5 digits are added)
-SecRule REQUEST_METHOD "@rx ^(?:cat|car|road|...( 200 random words which have 3 - 5 digits)|dark|bright|GET|HEAD)$" \
-```
-
-Here are the results of running the command `poetry run report`.
-
-- cAdvisor (three thresholds are failed): While cAdvisor is used to collect the CPU and memory usage, the following figure shows that Thresholds 1, 2 and 4 failed because the matrices (CPU total/user, memory) are higher than before.
-    ![report-example-cAdvisor-with-threshold](./assets/report-example-cAdvisor-with-threshold.png)
-- locust (without threshold): In the figure, you can see most of the matrices are marked in red, which represents the increase of the matrices. Specifically, matrices of p50, p66, and so on are increased.
-    ![report-example-locust](./assets/report-example-locust.png)
-- ftw (all thresholds are passed): In the figure, the total runtime is increased, which is expected.
-    ![report-example-ftw-with-threshold](./assets/report-example-ftw-with-threshold.png)
+The reports will show:
+- **cAdvisor**: CPU and memory usage metrics, with threshold validation if configured
+- **locust**: Response time percentiles (p50, p66, p75, etc.), requests per second, and content size
+- **ftw**: Runtime metrics, success/failed rates for test cases
 
 ## Pipeline Mode
 
-As a maintainer, they may want to test the performance of the WAF when releasing a new version. For example, they may want to know whether the new version of the WAF will affect the performance of the WAF. Meanwhile, they may want to set up thresholds for the performance. For example, they may want to set the following thresholds: **If a rule change on rule "920170" affects the network I/O, for instance, is slower than 5 times as the previous version, then the pipeline will fail.**
+As a maintainer, you may want to ensure that the WAF performance meets specific requirements before releasing a new version. The framework allows you to set up performance thresholds that must be met for the pipeline to pass. For example, you might want to ensure: **If rule "920170" runtime exceeds a certain threshold, the pipeline should fail.**
 
-Consequently, they can use the framework to test the performance before/after the code change, and they can block the pipeline if the performance is not as expected. To use the threshold, they need to create a configuration file for the threshold. For example:
+You can use the framework to test the WAF performance and validate it against defined thresholds. To use thresholds, create a configuration file. For example:
 
 ```json
 {
@@ -136,13 +120,12 @@ Consequently, they can use the framework to test the performance before/after th
     "thresholds": [
         {
             "id": 1,
-            "threshold_name": "avg_920170_test_cases_is_slow_more_than_5x",
-            "threshold_desc": "rule 920170 is slower than before more than 5x",
+            "threshold_name": "avg_920170_test_cases_runtime_limit",
+            "threshold_desc": "rule 920170 runtime must not exceed threshold",
             "metric_name": "runtime",
-            "comparison_unit": "",
-            "comparison_method": "ratioGt",
-            "comparison_object": "before",
-            "threshold": 5,
+            "comparison_unit": "seconds",
+            "comparison_method": "lessThan",
+            "threshold": 5.0,
             "include_labels": ["920170"],
             "exclude_labels": null
         }
@@ -150,20 +133,31 @@ Consequently, they can use the framework to test the performance before/after th
 }
 ```
 
-And run the following command to examine the threshold:
+Run the following commands in your CI/CD pipeline:
 ```sh
-# argument --threshold-conf defines the path to the threshold configuration file
-poetry run report --test-name test --utils locust --threshold-conf "./config"
+# Collect performance metrics
+poetry run collect --test-name pipeline-test --utils ftw
+
+# Generate report and validate against thresholds
+# The --threshold-conf argument defines the path to the threshold configuration file
+poetry run report --test-name pipeline-test --utils ftw --threshold-conf "./config"
+
+# If thresholds are not met, the report command will indicate failures
+# and your pipeline can be configured to fail based on the exit code
 ```
 
-# Utils and Matrices
+# Utils and Metrics
 
-The framework currently supports three utils. The following table depicts the supported utils and the corresponding matrices that can be collected:
+The framework currently supports three utilities for performance testing. Each utility collects different performance metrics:
 
-| Utils | [locust](https://locust.io/) | [cAdvisor](https://github.com/google/cadvisor) | [go-ftw](https://github.com/coreruleset/go-ftw) |
+**Note:** The `ftw` utility in this framework uses [go-ftw](https://github.com/coreruleset/go-ftw), which must be installed separately (see Prerequisites). The Python framework acts as a wrapper to orchestrate go-ftw and other testing tools.
+
+| Utils | [locust](https://locust.io/) | [cAdvisor](https://github.com/google/cadvisor) | go-ftw |
 |---|---|---|---|
-| Matrices | p50, p66, p75, ..., p99.99, p100; request per sec; average content size; min/max/avg/median response time | CPU (user, system, total); Memory (usage, cache); etc. | Runtime; Success/Failed rate |
-| Test cases | based on go-ftw yaml | based on go-ftw yaml | based on go-ftw yaml |
+| Description | Load testing tool | Container resource monitoring | Functional testing with go-ftw |
+| Metrics | p50, p66, p75, ..., p99.99, p100; request per sec; average content size; min/max/avg/median response time | CPU (user, system, total); Memory (usage, cache); etc. | Runtime; Success/Failed/Skipped count |
+| Test cases | based on go-ftw yaml | N/A (monitors containers) | based on go-ftw yaml format |
+| Usage in CLI | `--utils locust` | `--utils cAdvisor` | `--utils ftw` |
 
 # Get Started
 
@@ -173,8 +167,9 @@ The following sections will guide you to get started with the framework.
 
 To run the framework, you need to install the following tools:
 - [Poetry](https://python-poetry.org/docs/#installation)
-- [Python ≥ 3.9.0](https://www.python.org/downloads/)
+- [Python ≥ 3.11.0](https://www.python.org/downloads/)
 - [Docker](https://docs.docker.com/get-docker/)
+- [go-ftw](https://github.com/coreruleset/go-ftw) - For running functional tests (install via `go install github.com/coreruleset/go-ftw@latest` or download from releases)
 
 ## Quick Start
 
@@ -185,58 +180,54 @@ cd GSoC-2023
 source init.sh
 poetry install
 
-# And it is ready to go. Find a rule file and make some changes...
-# The framework will automatically detect your local changes and compared them with HEAD (latest commit)
+# Make sure go-ftw is installed and available in your PATH
+# Install via: go install github.com/coreruleset/go-ftw@latest
+# Or download from: https://github.com/coreruleset/go-ftw/releases
 
-# once finished, run:
+# Start collecting performance metrics using go-ftw:
 poetry run collect --test-name test --utils ftw
 
-# use threshold
+# Generate a report from the collected data
+poetry run report --test-name test --utils ftw
+
+# Use thresholds to validate performance
 poetry run report --test-name test --utils ftw --threshold "./config"
 ```
 
 ## 1. Start a Test
 
 ```sh
-# One-liner to start your performance test, where --test-name represents the name of the test, and --utils represents the util for testing.
-# by default, the command will compare HEAD (the latest commit) and . (which is the current directory) to get the changes
+# Start a performance test, where --test-name represents the name of the test,
+# and --utils represents the utility/utilities for testing.
 poetry run collect --test-name test --utils ftw
 
-# or multiple utils at a time
+# Run multiple utils at a time
 poetry run collect --test-name test --utils ftw,locust,cAdvisor
 
-# specify your commit
-poetry run collect --test-name test --before $GITHUB_COMMIT_A --after $GITHUB_COMMIT_B --utils ftw
+# Specify custom rules and test cases directories
+poetry run collect --test-name test --utils ftw --rules-dir ./rules --test-cases-dir ./tests/regression/tests
 
-# If you want to test on the latest change, you can use the following command:
-poetry run collect --test-name "latest-command-changes" --utils "ftw" --before HEAD^ --after HEAD
-
-# The test will generate these files, directories, and corresponding services automatically:
+# The test will generate these files and directories automatically:
 # -- Project directory
 #     |-- report (report data created by command `poetry run report`)
 #          |-- $TEST_NAME
-#               |-- _before_<util>_report
+#               |-- <util>_report
 #     |-- data (raw data collected from the util)
 #          |-- $TEST_NAME
-#               |-- <state>_<util>.data (e.g., before_ftw.json, after_locust_stats_history.json)
+#               |-- <util>.json (e.g., ftw.json, locust_stats.csv)
 #     |-- tmp (stores the temporary files during the test)
 #          |-- $TEST_NAME
-#               |-- after-rules (the rules after the changes)
-#               |-- before-rules (the rules before the changes)
-#               |-- test-cases (the test cases related to the changed rules)
 #               |-- exec.py (the script created by locust to run the test)
 
-# Specifically, the command has the following options:
-# --test-name       (required): the name of the test
-# --utils           (required): util for testing, if there is multiple utils, use comma to separate them
-# --before          (optional): git commit hash, default=HEAD
-# --after           (optional): git commit hash, or a path to a directory (default=.), Noted that only --after supports the local path.
-# --raw-output      (optional): default is ./data
-# --output          (optional): default is ./report
-# --waf-endpoint    (optional): default is http://localhost:80
-
-# @TODO
-# --clean-history   (optional): default is false, clean the tmp
+# Available command options:
+# --test-name         (required): the name of the test
+# --utils             (required): utility for testing, use comma to separate multiple utils
+# --raw-output        (optional): raw data output directory, default is ./data
+# --output            (optional): report output directory, default is ./report
+# --waf-endpoint      (optional): WAF endpoint URL, default is http://localhost:80
+# --rules-dir         (optional): directory containing WAF rules, default is ./rules
+# --test-cases-dir    (optional): directory containing test cases, default is ./tests/regression/tests
+# --mode              (optional): mode for running the command, default is cli
 ```
 
 ## 2. Get a Report

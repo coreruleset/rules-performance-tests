@@ -11,7 +11,6 @@ import subprocess
 import os
 import csv
 from typing import List
-from src.type import State
 from .Util import Util, ParsedDataItem, CollectCommandArg, ReportCommandArg
 
 
@@ -28,12 +27,12 @@ class LocustUtil(Util):
     __test_case_per_file_limit = 100
     __raw_file_name = "locust_stats.csv"
     __data_schema = ['type', 'name', 'req_cnt', 'req_fail_cnt', 'median_resp_time', 'avg_resp_time',
-                    'min_resp_time', 'max_resp_time', 'avg_content_size', 'req/sec', 'fail/sec', 
+                    'min_resp_time', 'max_resp_time', 'avg_content_size', 'req/sec', 'fail/sec',
                     'p50', 'p66', 'p75', 'p80', 'p90', 'p95', 'p98', 'p99', 'p99.9', 'p99.99', 'p100'
                     ]
 
 
-    def collect(self, args: CollectCommandArg, state: State = None):    
+    def collect(self, args: CollectCommandArg):
         self.__exec_filename =os.path.join(args.tmp_dir, self.__exec_filename)
 
         # init template
@@ -45,16 +44,15 @@ class LocustUtil(Util):
             f"-u {self.__max_users} \\"
             f"-r {self.__spawn_rate} \\"
             f"--host={args.waf_endpoint} \\"
-            f"--csv={args.raw_output}/{state.value}_locust \\"
-            f"-t {self.__runtime}s"   
+            f"--csv={args.raw_output}/locust \\"
+            f"-t {self.__runtime}s"
         )
 
         subprocess.run(command, shell=True, check=False, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
 
     def text_report(self, args: ReportCommandArg):
-        before_data = self.__parse_data(os.path.join(f"{args.raw_output}/{State.BEFORE.value}_{self.__raw_file_name}"))
-        after_data = self.__parse_data(os.path.join(f"{args.raw_output}/{State.AFTER.value}_{self.__raw_file_name}"))
-        print(self.create_data_diff_terminal_table(before_data, after_data, self.__data_schema[2:]))
+        data = self.__parse_data(os.path.join(f"{args.raw_output}/{self.__raw_file_name}"))
+        print(self.create_data_terminal_table(data, self.__data_schema[2:]))
 
     # @TODO: impl
     def figure_report(self, args: ReportCommandArg):
