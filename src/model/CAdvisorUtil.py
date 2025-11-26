@@ -9,7 +9,7 @@ import os
 from typing import Type, List
 import docker
 import requests
-from src.type import State, Mode
+from src.type import Mode
 from src.utils import logger
 from .Util import Util, ParsedDataItem, CollectCommandArg, ReportCommandArg
 
@@ -17,7 +17,7 @@ from .Util import Util, ParsedDataItem, CollectCommandArg, ReportCommandArg
 class CAdvisorUtil(Util):
     """
     CAdvisorUtil is a class for collecting and analyzing data from cAdvisor API.
-    
+
     Usage:
 
     ```sh
@@ -33,7 +33,7 @@ class CAdvisorUtil(Util):
     __cAdvisor_container_version: str = "v0.45.0"
     raw_filename: str = "cAdvisor.json"
 
-    def collect(self, args: CollectCommandArg, state: State = None):
+    def collect(self, args: CollectCommandArg):
         # start cAdvisor container
         self.__start_cadvisor()
 
@@ -58,18 +58,14 @@ class CAdvisorUtil(Util):
             time.sleep(10)
 
         self.fetch_data(data_list, timestamp_set, url)
-        self.save_json(f"{args.raw_output}/{state.value}_{self.raw_filename}", data_list)
+        self.save_json(f"{args.raw_output}/{self.raw_filename}", data_list)
         self.__stop_cadvisor()
 
     def text_report(self, args: ReportCommandArg):
-        before_data = self.parse_data(f"{args.raw_output}/{State.BEFORE.value}_{self.raw_filename}")
-        after_data = self.parse_data(f"{args.raw_output}/{State.AFTER.value}_{self.raw_filename}")
+        data = self.parse_data(f"{args.raw_output}/{self.raw_filename}")
 
         for matrix in ["cpu_total", "cpu_user", "cpu_system", "memory_usage", "memory_cache"]:
-            print(self.create_time_series_terminal_plot(matrix,
-                                                        before_data[matrix],
-                                                        after_data[matrix])
-                  )
+            print(self.create_time_series_terminal_plot(matrix, data[matrix]))
 
         if not args.threshold_conf:
             return
@@ -79,7 +75,7 @@ class CAdvisorUtil(Util):
                                          )
 
         for threshold in thresholds:
-            threshold.inspect(before_data[threshold.metric_name], after_data[threshold.metric_name])
+            threshold.inspect(data[threshold.metric_name])
 
     # @TODO: impl
     def figure_report(self, args: ReportCommandArg):
