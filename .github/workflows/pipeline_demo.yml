@@ -5,14 +5,19 @@ on:
     branches:
       - dev
 
+permissions:
+  contents: read
+
 jobs:
   push_to_pipeline_demo:
     runs-on: ubuntu-latest
+    permissions:
+      contents: write
     env:
       CoreRuleSetBranch: "v4.0/dev"
     steps:
       - name: git-checkout
-        uses: actions/checkout@v3
+        uses: actions/checkout@f43a0e5ff2bd294095638e18286ca9a3d1956744 # v3
 
       - name: initialize
         run: |
@@ -31,7 +36,7 @@ jobs:
           printf '%s\n' "${ignore_list[@]}" >> .gitignore
 
       - name: push
-        uses: s0/git-publish-subdir-action@develop
+        uses: s0/git-publish-subdir-action@ac113f6bfe8896e85a373534242c949a7ea74c98 # develop
         env:
           REPO: self
           BRANCH: demo
